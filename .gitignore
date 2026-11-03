@@ -1,0 +1,23 @@
+# Secrets and local config
+.env
+.env.*
+*.env
+*.pem
+*.key
+kubeconfig
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Logs and build output
+*.log
+tmp/
+dist/
+build/
+bin/
+node_modules/
+__pycache__/
+.venv/
