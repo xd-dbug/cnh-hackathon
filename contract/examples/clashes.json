@@ -1,0 +1,37 @@
+{
+  "clashes": [
+    {
+      "a": {
+        "id": "1233585",
+        "title": "Your Agent Needs a Platform: Cloud Native Infrastructure for Multi-Agent AI Systems",
+        "abstract": "Everyone is building AI agents. Almost no one is thinking about the infrastructure layer underneath them.\n\nThis talk reframes AI agents as cloud native workloads and shows how to build a production-grade multi-agent platform on Kubernetes. Topics covered: modeling agents as K8s custom resources, durable execution and retry semantics with Dapr, event-driven inter-agent messaging with NATS, and end-to-end observability using OpenTelemetry traces across agent hops.\n\nWe go beyond LangGraph demos to tackle the hard problems: failure recovery, agent scheduling, concurrency limits, and audit logging — the same concerns we solved for microservices, now applied to agents.",
+        "start": "2026-11-10T11:30:00-07:00",
+        "end": "2026-11-10T12:00:00-07:00",
+        "room": "Salt Palace | Level 2 | 255 BC",
+        "venue": "Salt Palace",
+        "speakers": [
+          "Soham Ghadge"
+        ],
+        "track": "AI Inference + Agentic",
+        "level": "Advanced",
+        "tags": []
+      },
+      "b": {
+        "id": "1246200",
+        "title": "Ask Your Platform: Putting AI to Work Where the Questions Live",
+        "abstract": "Every platform team has the same backlog: questions. Developers want to know what's happening in their namespace. On-call engineers want to know where to look first. The answers exist, just not fast.\n\nMost advice about AI starts with the technology. We started with the questions. We looked at where people already go for answers and put AI there, inside the work we were already doing. Investigations that used to take days now take hours.\n\nThis talk shows what that looked like in practice and how to spot the same opportunities on your own platform. You'll leave knowing where AI fits in platform engineering work, where it doesn't, and with the confidence to start. No AI background needed.",
+        "start": "2026-11-10T11:30:00-07:00",
+        "end": "2026-11-10T12:00:00-07:00",
+        "room": "Salt Palace | Level 1 | Grand Ballroom H",
+        "venue": "Salt Palace",
+        "speakers": [
+          "Anton Alexander",
+          "Scott Adams"
+        ],
+        "track": "AI Inference + Agentic",
+        "level": "Any Level",
+        "tags": []
+      }
+    }
+  ]
+}
