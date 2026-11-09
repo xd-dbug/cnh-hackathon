@@ -73,14 +73,16 @@ function observeRequest(span, request, response) {
       span.setAttributes(product);
       const status = response.statusCode;
       const durationMs = Date.now() - startedAt;
-      const route = request.route?.path ?? (request.url || '').split('?')[0];
+      const path = (request.url || '').split('?')[0];
+      const route = request.route?.path; // low-cardinality template; absent for unmatched requests
       logger.emit({
         severityNumber: status >= 500 ? SeverityNumber.ERROR : status >= 400 ? SeverityNumber.WARN : SeverityNumber.INFO,
         severityText: status >= 500 ? 'ERROR' : status >= 400 ? 'WARN' : 'INFO',
-        body: `${request.method} ${route} ${status} in ${durationMs} ms`,
+        body: `${request.method} ${route ?? path} ${status} in ${durationMs} ms`,
         context: trace.setSpan(context.active(), span),
         attributes: {
-          'http.route': route,
+          ...(route ? { 'http.route': route } : {}),
+          'url.path': path,
           'http.request.method': request.method,
           'http.response.status_code': status,
           duration_ms: durationMs,
