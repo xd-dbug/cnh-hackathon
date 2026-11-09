@@ -6,21 +6,25 @@ Users star KubeCon NA 2026 talks. The app finds talks whose times overlap and su
 similar talks at times that don't clash with the rest of their picks.
 
 ## Stack
-- Elasticsearch on the local kind cluster (ECK operator), reachable at `http://localhost:9200`.
-  The only datastore. Abstracts are in a `semantic_text` field.
+- Elasticsearch on Elastic Cloud Serverless (9.x), reached at `ES_URL` over HTTPS with an API key.
+  The only datastore. Abstracts are in a `semantic_text` field on the `.elser-2-elastic` inference
+  endpoint (Elastic Inference Service, so there's no model to download). Serverless rejects index
+  settings such as `number_of_shards`.
+- All agents share the one Cloud project. Only ingest writes the `talks` index; anything else
+  uses its own scratch index (see the api agent).
 - Node + Express API, JavaScript (ES modules).
 - React (Vite) frontend, JavaScript.
 - No Postgres, no auth. Starred talks live in the browser's localStorage.
 - OpenTelemetry: the API sends OTLP to the Collector running in kind (`http://localhost:4318`),
   and the Collector forwards to Dash0. The API never holds the Dash0 token.
-- The whole local stack (kind, Elasticsearch, Collector) is rebuilt by `infra/up.sh`.
+- The local stack (kind and the Collector) is rebuilt by `infra/up.sh`. Elasticsearch is not part of it.
 
 ## Layout and ownership
 | Folder | Owner | Notes |
 |---|---|---|
 | `contract/` | D (human) | `mapping.json`, `examples/*.json`. Read-only for agents. |
 | `schedule.html` | D (human) | Saved page snapshot at the repo root. Read-only for everyone. |
-| `infra/` | D (human) | kind config, ECK Elasticsearch, Collector values, `up.sh`. Read-only for agents. |
+| `infra/` | D (human) | kind config, Collector values, `up.sh`. Read-only for agents. |
 | `ingest/` | Agent A | Extractor and loader. Reads `../schedule.html`. |
 | `api/` | Agent B | Express server. |
 | `web/` | Agent C | React app. |
@@ -35,7 +39,8 @@ similar talks at times that don't clash with the rest of their picks.
 6. No new dependency without a one-line reason in the PR description.
 7. No secrets in code. Each checkout has a `.env` that is a symlink to D's env file outside the repo.
    Never create, edit or commit `.env`. If it's missing, stop and ask D. Variables:
-   `ES_URL`, `ES_USERNAME`, `ES_PASSWORD`, `OTEL_EXPORTER_OTLP_ENDPOINT`.
+   `ES_URL`, `ES_API_KEY`, `OTEL_EXPORTER_OTLP_ENDPOINT`.
+   Connect with `new Client({ node: ES_URL, auth: { apiKey: ES_API_KEY } })`.
 
 ## Data facts
 Source: https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/
@@ -63,7 +68,7 @@ start/end = startsAt / endsAt + "-07:00"
 room      = rooms[roomId].name
 venue     = room name before the first " | "  ("Salt Palace" / "Hyatt Regency")
 speakers  = speakers[] ids → "firstName lastName"
-track     = categoryItems in category "All Sessions"
+track     = categoryItems in category "All Sessions"   (exactly one value for every kept session)
 level     = categoryItems in category "Audience Level"   (Beginner | Any Level | Advanced)
 tags      = names from "SubTopic" and "CNCF Projects"
 ```
@@ -84,7 +89,7 @@ Expected result: **328 talks** (Mon 51, Tue 100, Wed 101, Thu 76). If the count 
 extraction is wrong.
 
 ## Commands
-- `infra/up.sh`: rebuild the local stack (D runs this, not agents)
+- `infra/up.sh`: rebuild the local stack, kind and the Collector (D runs this, not agents)
 - `npm run ingest`: extract talks from `schedule.html` and load them into Elasticsearch
 - `npm run dev:api`: API on port 3001
 - `npm run dev:web`: web app on port 5173

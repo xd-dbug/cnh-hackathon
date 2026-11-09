@@ -26,16 +26,20 @@ A React (Vite) app on port 5173. Keep it to one page:
 
 Each talk links to the official page: `https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=<id>`.
 
-Build against `contract/examples/*.json` first, behind an `VITE_USE_MOCKS=true` switch, then point
-at `http://localhost:3001`. Show times in Mountain Time, the conference's timezone, whatever the
+Build against `contract/examples/*.json` first, behind a `VITE_USE_MOCKS=true` switch, then point
+at `http://localhost:3001`. In mock mode, serve `talks.json` and `alternatives.json`, but compute
+clashes in the browser from `talks.json` with the contract's overlap rule
+(`a.start < b.end && b.start < a.end`) and its ordering rules. A static `clashes.json` would still
+show the clash after a swap. Show times in Mountain Time, the conference's timezone, whatever the
 viewer's machine is set to.
 
 Accessibility counts here (Merge Forward track): semantic HTML, labelled buttons, visible focus,
 keyboard-operable star and swap.
 
 ## Done when
-The demo path works from mocks, and then from the live API: star two clashing Tuesday 11:30 talks,
-see the clash, open alternatives, swap, and the clash clears. Put a screenshot in the PR description.
+The demo path works from mocks, and then from the live API: star two clashing Tuesday 11:30 talks
+(`1233585` and `1246200` in the mocks), see the clash, open alternatives for `1246200`, swap, and the
+clash clears. `level` can be missing; the card must still render. Put a screenshot in the PR description.
 
 ## Ship
 Branch `agent-c/<feature>`, commit, push, `gh pr create`. Wait for Gitar's review, fix what it flags,
