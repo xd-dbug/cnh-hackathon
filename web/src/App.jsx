@@ -260,7 +260,7 @@ export default function App() {
           {term && <p className="hint">Day picker is ignored while searching. Clear the search to browse by day.</p>}
           <p aria-live="polite">
             {term
-              ? `Results for "${term}" across all days${talks.loading || talks.error ? '' : ` (${talks.data?.length ?? 0})`}`
+              ? `Results for "${term}" across all days${talks.loading || talks.error ? '' : ` (${(talks.data?.length ?? 0) >= 50 ? 'top 50' : (talks.data?.length ?? 0)})`}`
               : ''}
           </p>
           {talks.error && <p role="alert">Could not load talks: {talks.error}</p>}
