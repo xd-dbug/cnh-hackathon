@@ -1,0 +1,31 @@
+:root { font-family: system-ui, sans-serif; color: #1a1a2e; background: #f5f6fa; }
+body { margin: 0; }
+header { background: #326ce5; color: #fff; padding: 1rem 1.5rem; }
+header h1 { margin: 0; font-size: 1.5rem; }
+header p { margin: 0.25rem 0 0; }
+main { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+.panel { background: #fff; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px #0002; }
+.panel h2 { margin-top: 0; }
+.plain { list-style: none; padding: 0; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 0.75rem; }
+.card { border: 1px solid #d5d8e2; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.5rem; }
+.grid .card { margin: 0; height: 100%; box-sizing: border-box; }
+.card.is-starred { border-color: #e0a800; background: #fffbea; }
+.card-head { display: flex; justify-content: space-between; gap: 0.5rem; }
+h3, h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+a { color: #1d4ed8; }
+.meta { margin: 0 0 0.5rem; font-size: 0.875rem; }
+.meta div { display: flex; gap: 0.5rem; }
+.meta dt { font-weight: 600; min-width: 4.5rem; }
+.meta dd { margin: 0; }
+.snippet { font-size: 0.875rem; color: #444; }
+.filters { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-bottom: 1rem; }
+button { font: inherit; cursor: pointer; padding: 0.35rem 0.8rem; border: 1px solid #326ce5; background: #fff; color: #1d4ed8; border-radius: 4px; }
+button:hover { background: #e8efff; }
+button[aria-pressed='true'].day, button.day[aria-pressed='true'] { background: #326ce5; color: #fff; }
+.star { font-size: 1.4rem; line-height: 1; padding: 0.1rem 0.5rem; border-color: transparent; color: #b58900; align-self: flex-start; }
+:focus-visible { outline: 3px solid #ff9f1c; outline-offset: 2px; }
+.clash { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem; align-items: start; border: 1px solid #e5a3a3; background: #fff5f5; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.vs { align-self: center; font-weight: 700; color: #b00020; }
+@media (max-width: 700px) { .clash { grid-template-columns: 1fr; } }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
