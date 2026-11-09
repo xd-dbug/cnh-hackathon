@@ -103,6 +103,25 @@ const CONSOLE_LEVELS = {
   error: [SeverityNumber.ERROR, 'ERROR'],
 };
 
+// Lines Node itself prints to stderr for process warnings; these are reported once, as WARN, by the 'warning' listener.
+const NODE_WARNING_LINE = /^\(node:\d+\) (\[\w+\] )?\w*Warning:|^\(Use `node --trace-/;
+
+/** Emit Node process warnings (deprecations etc.) as a single WARN log record. */
+function bridgeProcessWarnings() {
+  process.on('warning', (warning) => {
+    try {
+      logger.emit({
+        severityNumber: SeverityNumber.WARN,
+        severityText: 'WARN',
+        body: `${warning.name}: ${warning.message}`,
+        attributes: { 'process.warning.name': warning.name, ...(warning.code ? { 'process.warning.code': warning.code } : {}) },
+      });
+    } catch {
+      // never let telemetry break the app
+    }
+  });
+}
+
 /** Bridge console.* to OTel logs: still prints to stdout/stderr, and also emits a log record. */
 function bridgeConsole() {
   let emitting = false; // recursion guard
@@ -110,7 +129,7 @@ function bridgeConsole() {
     const original = console[method].bind(console);
     console[method] = (...args) => {
       original(...args);
-      if (emitting) return;
+      if (emitting || (typeof args[0] === 'string' && NODE_WARNING_LINE.test(args[0]))) return;
       emitting = true;
       try {
         const err = args.find((a) => a instanceof Error);
@@ -155,6 +174,7 @@ const sdk = new NodeSDK({
 });
 sdk.start();
 bridgeConsole();
+bridgeProcessWarnings();
 
 // Flush buffered spans/metrics on Ctrl+C (SIGINT) and SIGTERM.
 for (const sig of ['SIGINT', 'SIGTERM']) process.once(sig, () => sdk.shutdown().finally(() => process.exit(0)));
