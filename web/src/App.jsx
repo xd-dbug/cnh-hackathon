@@ -130,13 +130,14 @@ export default function App() {
   const [altFor, setAltFor] = useState(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setQuery(q), 250);
+    const t = setTimeout(() => setQuery(q), 300);
     return () => clearTimeout(t);
   }, [q]);
 
   useEffect(() => saveStarred(starred), [starred]);
 
-  const talks = useAsync(() => fetchTalks({ day, q: query }), [day, query]);
+  const term = query.trim();
+  const talks = useAsync(() => fetchTalks({ day, q: term }), [day, term]);
   const clashes = useAsync(() => fetchClashes(starred), [starred]);
   const alts = useAsync(
     () =>
@@ -243,7 +244,9 @@ export default function App() {
                   type="button"
                   className="day"
                   aria-pressed={day === d.date}
-                  onClick={() => setDay(d.date)}
+                  aria-disabled={term ? 'true' : undefined}
+                  style={term ? { opacity: 0.5 } : undefined}
+                  onClick={() => !term && setDay(d.date)}
                 >
                   {d.label}
                 </button>
@@ -254,9 +257,15 @@ export default function App() {
               <input type="search" value={q} onChange={(e) => setQ(e.target.value)} />
             </label>
           </div>
+          {term && <p className="hint">Day picker is ignored while searching. Clear the search to browse by day.</p>}
+          <p aria-live="polite">
+            {term
+              ? `Results for "${term}" across all days${talks.loading || talks.error ? '' : ` (${talks.data?.length ?? 0})`}`
+              : ''}
+          </p>
           {talks.error && <p role="alert">Could not load talks: {talks.error}</p>}
           {talks.loading && <p>Loading…</p>}
-          {!talks.loading && !talks.error && talks.data?.length === 0 && <p>No talks found.</p>}
+          {!talks.loading && !talks.error && talks.data?.length === 0 && <p>{term ? `No talks match "${term}"` : 'No talks found.'}</p>}
           <ul className="plain grid">
             {(talks.data || []).map((t) => (
               <li key={t.id}>
