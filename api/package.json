@@ -1,0 +1,13 @@
+{
+  "name": "api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:api": "node --env-file=../.env server.js"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^9.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.0"
+  }
+}
