@@ -39,19 +39,20 @@ async function getJSON(url, init) {
 
 /**
  * GET /talks
- * @param {{day: string, q?: string}} p day is YYYY-MM-DD
+ * @param {{day?: string, q?: string}} p day is YYYY-MM-DD; omitted when searching (all days)
  * @returns {Promise<Talk[]>}
  */
 export async function fetchTalks({ day, q }) {
   if (USE_MOCKS) {
     const needle = (q || '').trim().toLowerCase();
     return (await mockTalks())
-      .filter((t) => t.start.startsWith(day))
+      .filter((t) => needle || t.start.startsWith(day))
       .filter((t) => !needle || `${t.title} ${t.abstract || ''}`.toLowerCase().includes(needle))
       .sort((a, b) => a.start.localeCompare(b.start) || a.id.localeCompare(b.id));
   }
-  const params = new URLSearchParams({ day });
+  const params = new URLSearchParams();
   if (q && q.trim()) params.set('q', q.trim());
+  else params.set('day', day);
   return (await getJSON(`${BASE}/talks?${params}`)).talks;
 }
 
