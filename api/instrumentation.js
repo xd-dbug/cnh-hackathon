@@ -57,4 +57,5 @@ const sdk = new NodeSDK({
 });
 sdk.start();
 
-process.once('SIGTERM', () => sdk.shutdown().finally(() => process.exit(0)));
+// Flush buffered spans/metrics on Ctrl+C (SIGINT) and SIGTERM.
+for (const sig of ['SIGINT', 'SIGTERM']) process.once(sig, () => sdk.shutdown().finally(() => process.exit(0)));
