@@ -1,0 +1,14 @@
+{
+  "name": "cnh-hackathon",
+  "private": true,
+  "type": "module",
+  "workspaces": ["ingest", "api", "web"],
+  "scripts": {
+    "ingest": "npm run ingest --workspace=ingest",
+    "dev:api": "npm run dev:api --workspace=api",
+    "dev:web": "npm run dev:web --workspace=web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

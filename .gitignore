@@ -21,3 +21,6 @@ bin/
 node_modules/
 __pycache__/
 .venv/
+
+# Assets saved with schedule.html (not needed; data is the embedded JSON)
+*_files/

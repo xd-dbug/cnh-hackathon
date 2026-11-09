@@ -1,0 +1,57 @@
+# Endpoint and token come from the dash0-credentials Secret, which up.sh builds from
+# DASH0_ENDPOINT and DASH0_AUTH_TOKEN. Nothing sensitive lives in this file.
+mode: deployment
+replicaCount: 1
+resources:
+  limits:
+    memory: 512Mi
+image:
+  repository: otel/opentelemetry-collector-contrib
+presets:
+  kubernetesAttributes:
+    enabled: false
+extraEnvs:
+  - name: DASH0_ENDPOINT
+    valueFrom:
+      secretKeyRef: { name: dash0-credentials, key: endpoint }
+  - name: DASH0_AUTH_TOKEN
+    valueFrom:
+      secretKeyRef: { name: dash0-credentials, key: token }
+service:
+  type: NodePort
+ports:
+  otlp:
+    enabled: true
+    nodePort: 30417
+  otlp-http:
+    enabled: true
+    nodePort: 30418
+  jaeger-compact: { enabled: false }
+  jaeger-thrift: { enabled: false }
+  jaeger-grpc: { enabled: false }
+  zipkin: { enabled: false }
+config:
+  receivers:
+    jaeger: null
+    zipkin: null
+    prometheus: null
+  exporters:
+    debug: {}
+    otlp_grpc/dash0:
+      endpoint: ${env:DASH0_ENDPOINT}
+      headers:
+        Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+  service:
+    pipelines:
+      traces:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp_grpc/dash0, debug]
+      metrics:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp_grpc/dash0, debug]
+      logs:
+        receivers: [otlp]
+        processors: [memory_limiter, batch]
+        exporters: [otlp_grpc/dash0, debug]

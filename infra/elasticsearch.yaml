@@ -1,0 +1,39 @@
+# Dev-only single node: TLS off, basic auth on. Reached at http://localhost:9200 via the kind port mapping.
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: hackathon
+  namespace: elastic
+spec:
+  version: 8.19.23
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: NodePort
+        ports:
+          - { name: http, port: 9200, targetPort: 9200, nodePort: 30920, protocol: TCP }
+  nodeSets:
+    - name: default
+      count: 1
+      config:
+        # Let ML use the memory left after the heap, not a fixed 30%, so the embedding model fits.
+        xpack.ml.use_auto_machine_memory_percent: true
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests: { cpu: 500m, memory: 6Gi }
+                limits: { memory: 6Gi }
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes: [ReadWriteOnce]
+            storageClassName: standard
+            resources:
+              requests:
+                storage: 5Gi
