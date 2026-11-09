@@ -3,7 +3,10 @@ import cors from 'cors';
 import { Client } from '@elastic/elasticsearch';
 
 const INDEX = process.env.TALKS_INDEX || 'talks';
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+const SEARCH_SIZE = 50;
+// Calibrated on the real index: real queries score 8-20 on their best talk, nonsense <= 5.
+const SEMANTIC_MIN_SCORE = 6;
 const LEVELS = ['Beginner', 'Any Level', 'Advanced'];
 const ACCESSIBLE_TRACK = 'Inclusion + Accessibility';
 const FIELDS = ['id', 'title', 'abstract', 'start', 'end', 'room', 'venue', 'speakers', 'track', 'level', 'tags'];
@@ -125,15 +128,28 @@ app.get('/talks', wrap(async (req, res) => {
 
   const body = term
     ? {
-        size: 50,
-        query: {
-          bool: {
-            filter,
-            should: [
-              { multi_match: { query: term, fields: ['title', 'speakers', 'tags'] } },
-              { semantic: { field: 'abstract', query: term } },
+        size: SEARCH_SIZE,
+        retriever: {
+          rrf: {
+            rank_window_size: SEARCH_SIZE,
+            retrievers: [
+              {
+                standard: {
+                  query: {
+                    multi_match: { query: term, fields: ['title^3', 'speakers^2', 'tags'], minimum_should_match: '2<75%' },
+                  },
+                  filter,
+                },
+              },
+              {
+                standard: {
+                  query: { semantic: { field: 'abstract', query: term } },
+                  filter,
+                  // ELSER scores every doc a little; below this the match is noise.
+                  min_score: SEMANTIC_MIN_SCORE,
+                },
+              },
             ],
-            minimum_should_match: 1,
           },
         },
       }
