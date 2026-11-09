@@ -1,0 +1,18 @@
+{
+"mappings": {
+	"dynamic": "strict",
+	"properties": {
+		"id": { "type": "keyword" },
+		"title": { "type": "text" },
+		"abstract": { "type": "semantic_text", "inference_id": ".elser-2-elastic"},
+		"start": { "type": "date" },
+		"end": { "type": "date" },
+		"room": { "type": "keyword" },
+		"venue": { "type": "keyword" },
+		"speakers": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+		"track": { "type": "keyword" },
+		"level": { "type": "keyword" },
+		"tags": { "type": "text", "fields": { "keyword": { "type": "keyword" } } }
+		}
+	}
+}
