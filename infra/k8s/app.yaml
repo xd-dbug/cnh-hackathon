@@ -1,0 +1,97 @@
+# The Clash Resolver app in the kind cluster: api + web in namespace `clash`.
+# Applied by deploy.sh, which builds the images, loads them into kind, creates the clash-es Secret
+# and fills in TAG and ES_SECRET_HASH. Don't kubectl apply this file directly.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: clash
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: clash
+  labels: { app.kubernetes.io/name: api, app.kubernetes.io/part-of: clash-resolver }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: api } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: api, app.kubernetes.io/part-of: clash-resolver }
+      annotations:
+        clash-resolver/es-secret-hash: ES_SECRET_HASH   # deploy.sh fills this in, so a new secret rolls the pods
+    spec:
+      containers:
+        - name: api
+          image: clash-api:TAG
+          imagePullPolicy: IfNotPresent
+          ports: [{ name: http, containerPort: 3001 }]
+          envFrom:
+            - secretRef: { name: clash-es }   # ES_URL, ES_API_KEY
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-opentelemetry-collector.otel.svc.cluster.local:4318
+            - name: K8S_POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: K8S_NODE_NAME
+              valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+            # Lets Dash0 tie the API's traces, metrics and logs to this pod.
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: k8s.namespace.name=clash,k8s.deployment.name=api,k8s.pod.name=$(K8S_POD_NAME),k8s.node.name=$(K8S_NODE_NAME)
+          readinessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: clash
+spec:
+  selector: { app.kubernetes.io/name: api }
+  ports: [{ name: http, port: 3001, targetPort: http }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: clash
+  labels: { app.kubernetes.io/name: web, app.kubernetes.io/part-of: clash-resolver }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app.kubernetes.io/name: web } }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: web, app.kubernetes.io/part-of: clash-resolver }
+    spec:
+      containers:
+        - name: web
+          image: clash-web:TAG
+          imagePullPolicy: IfNotPresent
+          ports: [{ name: http, containerPort: 80 }]
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { memory: 64Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: clash
+spec:
+  selector: { app.kubernetes.io/name: web }
+  ports: [{ name: http, port: 80, targetPort: http }]

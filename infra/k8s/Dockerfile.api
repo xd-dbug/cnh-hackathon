@@ -1,0 +1,18 @@
+# API image. Build context is the repo root: docker build -f infra/k8s/Dockerfile.api .
+FROM node:26-alpine
+WORKDIR /app
+
+# npm workspaces: the lockfile is at the root and npm ci checks every workspace's package.json.
+COPY package.json package-lock.json ./
+COPY ingest/package.json ingest/
+COPY api/package.json api/
+COPY web/package.json web/
+RUN npm ci --workspace=api --omit=dev --no-audit --no-fund
+
+COPY api/ api/
+WORKDIR /app/api
+ENV NODE_ENV=production
+USER node
+EXPOSE 3001
+# No --env-file: in the cluster, ES_URL/ES_API_KEY come from a Secret and the OTLP endpoint from the Deployment.
+CMD ["node", "--import", "./instrumentation.js", "server.js"]
