@@ -16,3 +16,5 @@
 
 ## AI use
 Built with Claude Code subagents, directed and reviewed by Damian Swiney.
+
+Test edit to confirm Gitar reviews pull requests.
