@@ -24,7 +24,7 @@ of their picks overlap. The official schedule shows the overlap but doesn't help
 
 ## Demo
 
-> **[Demo video link]**
+> **https://drive.google.com/file/d/1Wgi0hC7WIKzVfJLLxekUGyKGELVxpvNw/view?usp=sharing**
 
 The demo path: pick **Tue** → star *Your Agent Needs a Platform* and *Ask Your Platform* (both 11:30)
 → the clash appears → **Find alternatives** on *Ask Your Platform* → **Swap** for *Platform
