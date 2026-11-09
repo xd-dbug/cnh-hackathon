@@ -1,0 +1,12 @@
+{
+  "name": "ingest",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "ingest": "node --env-file=../.env index.js"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "^9.0.0",
+    "he": "^1.2.0"
+  }
+}

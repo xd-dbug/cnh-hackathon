@@ -24,3 +24,6 @@ __pycache__/
 
 # Assets saved with schedule.html (not needed; data is the embedded JSON)
 *_files/
+
+# Claude Code agent worktrees (created by isolation: worktree)
+.claude/worktrees/
