@@ -1,0 +1,20 @@
+# Web image: Vite build served by nginx, which also proxies /api to the api Service (same origin, no CORS).
+# Build context is the repo root: docker build -f infra/k8s/Dockerfile.web .
+FROM node:26-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY ingest/package.json ingest/
+COPY api/package.json api/
+COPY web/package.json web/
+RUN npm ci --workspace=web --no-audit --no-fund
+
+# The web app imports contract/examples for its mock mode, so the build needs contract/.
+COPY contract/ contract/
+COPY web/ web/
+ENV VITE_API_URL=/api
+RUN npm run build --workspace=web
+
+FROM nginx:1.27-alpine
+COPY infra/k8s/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/web/dist /usr/share/nginx/html
+EXPOSE 80
