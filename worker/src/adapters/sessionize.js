@@ -69,8 +69,6 @@ export function classifyCategories(categories) {
   return { track, level, tags };
 }
 
-const SERVICE_TITLE = /^(coffee|tea|snack)?\s*(break|lunch|registration|badge pick-?up)\b/i;
-
 /**
  * Map Sessionize data to raw sessions. Lookups that come back empty just leave the field out.
  * @param {object} all result of readSchedule
@@ -116,7 +114,7 @@ export function buildTalks(all, { sourceUrl, withUrls = false } = {}) {
       track: names(s, track)[0],
       level: names(s, level)[0],
       tags: [...new Set(tags.flatMap((t) => names(s, t)))],
-      isService: Boolean(s.isServiceSession) || SERVICE_TITLE.test(String(s.title).trim()),
+      isService: Boolean(s.isServiceSession),
     };
     for (const k of Object.keys(raw)) if (raw[k] === undefined || raw[k] === '') delete raw[k];
     out.push(raw);

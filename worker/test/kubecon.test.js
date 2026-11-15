@@ -5,7 +5,7 @@ import { pickAdapter } from '../src/adapters/index.js';
 import { classifyCategories, readSchedule } from '../src/adapters/sessionize.js';
 import { cleanAbstract } from '../src/clean.js';
 import { UNSUPPORTED_SITE_MESSAGE, UnsupportedSiteError } from '../src/errors.js';
-import { normalise } from '../src/normalise.js';
+import { isServiceTitle, normalise } from '../src/normalise.js';
 import { parseSource } from '../src/pipeline.js';
 
 const URL_ = 'https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/';
@@ -31,14 +31,14 @@ describe('KubeCon fixture (Sessionize embedded data)', () => {
     assert.equal(parsed.timezone, 'America/Denver');
   });
 
-  it('gives 328 talks after the allowlist and 90-minute limit', () => {
-    assert.equal(kept.length, 328);
+  it('gives 326 talks after the allowlist and 90-minute limit', () => {
+    assert.equal(kept.length, 326);
   });
 
-  it('gives Mon 51, Tue 100, Wed 101, Thu 76', () => {
+  it('gives Mon 49, Tue 100, Wed 101, Thu 76', () => {
     const perDay = {};
     for (const t of kept) perDay[t.start.slice(0, 10)] = (perDay[t.start.slice(0, 10)] ?? 0) + 1;
-    assert.deepEqual(perDay, { '2026-11-09': 51, '2026-11-10': 100, '2026-11-11': 101, '2026-11-12': 76 });
+    assert.deepEqual(perDay, { '2026-11-09': 49, '2026-11-10': 100, '2026-11-11': 101, '2026-11-12': 76 });
   });
 
   it('writes -07:00 on every time', () => {
@@ -134,5 +134,16 @@ describe('registry and normalise', () => {
   });
   it('cleans abstracts', () => {
     assert.equal(cleanAbstract('<p>Tom &amp; Jerry&#039;s</p><p>Second<br>line</p>'), "Tom & Jerry's\n\nSecond\nline");
+  });
+});
+
+describe('isServiceTitle', () => {
+  it('skips breaks and meals, with or without emoji', () => {
+    for (const t of ['☕ Coffee Break', '🍲 Lunch', 'Lunch Break', 'Morning Break', 'Registration', 'Badge Pick-up', 'Breakfast'])
+      assert.equal(isServiceTitle(t), true, t);
+  });
+  it('keeps talks that merely mention them', () => {
+    for (const t of ['Breaking Changes in Kubernetes', 'Lunch & Learn: eBPF', 'Registration Flows with OIDC', 'Take a Break from YAML'])
+      assert.equal(isServiceTitle(t), false, t);
   });
 });

@@ -3,6 +3,18 @@ import { formatInTz, isValidTimezone, parseTime } from './tz.js';
 
 export const MAX_DURATION_MS = 4 * 3600 * 1000;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
+// Breaks, meals and registration, whatever the source. Leading emoji and punctuation are ignored
+// ("☕ Coffee Break", "🍲 Lunch"); the whole title must be the service name, so "Breaking Changes
+// in Kubernetes" or "Lunch & Learn: eBPF" are kept.
+const SERVICE_TITLE = /^(?:(?:morning|afternoon|coffee|tea|snack)\s+)?(?:break|lunch|breakfast|registration|badge pick-?up)(?:\s*(?:break|&\s*networking))?$/i;
+
+/**
+ * @param {string} title
+ * @returns {boolean} true for a break, meal or registration slot
+ */
+export function isServiceTitle(title) {
+  return SERVICE_TITLE.test(String(title ?? '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''));
+}
 
 /**
  * @typedef {object} Talk The shape of a `talks` row, before embedding.
@@ -38,7 +50,7 @@ export function normalise(raw, { timezone, hint } = {}) {
   const seen = new Set();
   const talks = [];
   for (const r of raw) {
-    if (r.isService) { skipped.service++; continue; }
+    if (r.isService || isServiceTitle(r.title)) { skipped.service++; continue; }
     if (!ID.test(String(r.id ?? ''))) { skipped.badId++; continue; }
     if (seen.has(r.id)) { skipped.duplicate++; continue; }
     let start;

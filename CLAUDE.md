@@ -81,8 +81,10 @@ Sessionize times have no offset: they are local to the event. Map `room` from `r
 "All Sessions", "Audience Level", and "SubTopic" + "CNCF Projects".
 
 **KubeCon fixture test:** `schedule.html` is KubeCon NA 2026 in Salt Lake City (`America/Denver`).
-With this track allowlist and a 90-minute limit it must give **328 talks** (Mon 51, Tue 100,
-Wed 101, Thu 76). The allowlist belongs to the test, not the app:
+With this track allowlist and a 90-minute limit it must give **326 talks** (Mon 49, Tue 100,
+Wed 101, Thu 76). (The hackathon build had 328: it counted two Monday coffee breaks that the
+source files under "Project Lightning Talks".) A plain scrape keeps every non-service session
+under 4 hours, which is 557. The allowlist belongs to the test, not the app:
 AI Inference + Agentic, Application Development + Delivery, Cloud Native Experience,
 Cloud Native Novice, Connectivity, Data Processing + Storage, Emerging + Advanced,
 Observability, Operations + Performance, Platform Engineering, Security, Maintainer Track,

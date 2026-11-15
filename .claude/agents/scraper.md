@@ -36,12 +36,12 @@ file, `--url=<source url>` sets `source_url`.
 ## Tests
 `node:test`, against fixtures in `worker/test/fixtures/` (copy `schedule.html` there; don't move
 it). The KubeCon fixture test applies the allowlist and 90-minute limit from CLAUDE.md and must give
-328 talks (Mon 51, Tue 100, Wed 101, Thu 76). Unit-test the SSRF checks (`127.0.0.1`,
+326 talks (Mon 49, Tue 100, Wed 101, Thu 76). Unit-test the SSRF checks (`127.0.0.1`,
 `169.254.169.254`, `::1`, `10.x`, a redirect to a private IP).
 
 ## Done when
-`npm test` passes, and `npm run scrape -- schedule.html --url=<KubeCon schedule URL>` loads 328
-talks and prints one sample row with a non-null embedding. Paste both outputs in the PR.
+`npm test` passes, and `npm run scrape -- schedule.html --url=<KubeCon schedule URL>` loads the
+conference (557 talks, no allowlist) and prints one sample row with a non-null embedding. Paste both outputs in the PR.
 
 ## Ship
 Branch `agent-s/<feature>`, commit, push, `gh pr create`, and say when it's ready for D to review.
