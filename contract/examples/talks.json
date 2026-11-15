@@ -13,7 +13,8 @@
       ],
       "track": "AI Inference + Agentic",
       "level": "Advanced",
-      "tags": []
+      "tags": [],
+      "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1233585"
     },
     {
       "id": "1246200",
@@ -29,7 +30,8 @@
       ],
       "track": "AI Inference + Agentic",
       "level": "Any Level",
-      "tags": []
+      "tags": [],
+      "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1246200"
     },
     {
       "id": "1335605",
@@ -44,7 +46,8 @@
         "David Ashpole"
       ],
       "track": "Maintainer Track",
-      "tags": []
+      "tags": [],
+      "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1335605"
     },
     {
       "id": "1249819",
@@ -59,7 +62,8 @@
       ],
       "track": "Platform Engineering",
       "level": "Any Level",
-      "tags": []
+      "tags": [],
+      "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1249819"
     },
     {
       "id": "1243089",
@@ -74,7 +78,8 @@
       ],
       "track": "Platform Engineering",
       "level": "Any Level",
-      "tags": []
+      "tags": [],
+      "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1243089"
     }
   ]
 }

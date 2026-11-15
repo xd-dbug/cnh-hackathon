@@ -1,54 +1,49 @@
 ---
 name: api
-description: Agent B. Builds the Express API (talks, clashes, alternatives) on top of the Elasticsearch talks index. Use for anything in api/ except instrumentation.js.
+description: Agent B. Builds the Express API (conferences, talks, clashes, alternatives) on Postgres + pgvector. Use for anything in api/ except instrumentation.js.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 isolation: worktree
 ---
 
-You are Agent B (api) on the Conference Clash Resolver. Read CLAUDE.md first; it is binding.
+You are Agent B (api) on the Conference Clash Resolver. Read CLAUDE.md and
+`.claude/plans/multi-conference-pivot.md` (the API section) first; they are binding.
 
 ## You own
 `api/`, except `api/instrumentation.js` (Agent T's). You read `contract/`. You never edit it.
 
 ## Task
-An Express server on port 3001 with CORS for `http://localhost:5173`. Three endpoints, and every
-response must match the shape in `contract/examples/`:
+An Express server on port 3001 with CORS for `http://localhost:5173`, using `pg` with
+`DATABASE_URL`. Every route, status code and edge case is in `contract/README.md`, and every
+response must match `contract/examples/`. Remove `@elastic/elasticsearch`.
 
-**`GET /talks?q=&day=`** → `contract/examples/talks.json`
-Browse and search. `q` combines a keyword `multi_match` on `title`, `speakers` and `tags` with a
-`semantic` query on `abstract`, in one `bool.should`. (A `match` on a `semantic_text` field runs a
-semantic search, so `abstract` can't be keyword-matched.) `day` is `YYYY-MM-DD`.
-Sizes, sort order and the missing-field rules are in `contract/README.md`.
+Keep from the old `api/server.js`: `toTalk`, `HttpError`, `validateIds`, `parseStarredParam`, the
+error middleware, and the clash pairing and sort (switch `cmpId` to plain string comparison).
 
-**`POST /clashes`** body `{ "starred": [ids] }` → `contract/examples/clashes.json`
-Fetch the starred talks and return every pair where `a.start < b.end && b.start < a.end`.
-Compute this in JS. It's a handful of talks, so no ES query is needed.
+- **`POST /conferences`:** validate and normalise the URL, insert or find the conference, and
+  `boss.send('scrape', {conferenceId})` for a new or re-queued one. Rate-limit this route only
+  (`express-rate-limit`).
+- **Times out:** format `start_at`/`end_at` in the conference's `timezone` with its offset at that
+  instant (`Intl.DateTimeFormat` with `timeZoneName: 'longOffset'`). Test a DST-spanning case.
+- **`day`:** `start_at >= ($day::timestamp AT TIME ZONE tz) AND start_at < (($day::date + 1)::timestamp AT TIME ZONE tz)`.
+- **Search (`q`):** hybrid. A full-text query (`tsv @@ websearch_to_tsquery('english', $q)`, ranked
+  by `ts_rank_cd`) and a vector query (`embedding <=> $qvec`, with a similarity floor you calibrate
+  so nonsense queries return nothing, as `min_score: 6` did) each return up to 50. Fuse them in JS
+  with RRF (k = 60). Load the embedding model lazily, on the first `q`.
+- **Alternatives:** one SQL query. `ORDER BY embedding <=> (the talk's embedding) LIMIT 5`,
+  `WHERE id <> ALL($excluded)`, the optional `level`, and `NOT EXISTS` a starred talk (other than
+  `talk`) that overlaps, with the strict `<` rule. `score = 1 - distance`.
 
-**`GET /alternatives?talk=<id>&starred=<id,id,…>&level=&accessible=`** → `contract/examples/alternatives.json`
-The core feature:
-1. Load talk `<id>` and use its abstract as a `semantic` query on the `abstract` field.
-2. Exclude `<id>` itself and every starred id.
-3. Exclude any talk that overlaps **any other starred talk** (every starred id except `<id>`).
-   Use one `bool.must_not` range clause per starred talk: `start < other.end AND end > other.start`.
-4. Optional `level` filter. Optional `accessible=true` boosts (not filters) talks whose track is
-   "Inclusion + Accessibility". There are only 14 of them, so a hard filter would usually return nothing.
-5. Return the top 5 with their relevance score.
-
-Validate inputs and return 400 with `{ "error": "<message>" }` on bad ids. Return 404 for an unknown talk.
-`contract/README.md` defines a valid ID and the edge cases (empty `starred`, no alternatives).
-
-Connect with `ES_URL` and `ES_API_KEY` (`auth: { apiKey }`). Read the index name from `TALKS_INDEX`,
-defaulting to `talks`.
+## Tests
+`node:test`. Unit-test the clash pairing and ordering, id validation and time formatting without
+a database. Integration tests run against `DATABASE_URL` in a schema of their own, created from
+`contract/schema.sql` and dropped at the end. Never touch rows the worker wrote.
 
 ## Done when
-A curl of each endpoint returns the example's shape. Put a `curl` + output for each in the PR description.
-Check one alternatives call by hand: no result overlaps a starred talk.
+A curl of each route returns the example's shape, including a 400, 404 and 409. Put each curl and
+its output in the PR description. Check one alternatives call by hand: no result overlaps a
+starred talk.
 
 ## Ship
-Branch `agent-b/<feature>`, commit, push, `gh pr create`. Wait for Gitar's review, fix what it flags,
-and say when it's ready for D to merge. Never merge it yourself.
-
-Before the ingest PR lands, test against your own scratch index, never `talks` (ingest owns it, and
-all agents share one Cloud project). Create `talks-api-dev` from `contract/mapping.json`, index the
-talks from `contract/examples/`, run with `TALKS_INDEX=talks-api-dev`, and delete the index when done.
+Branch `agent-b/<feature>`, commit, push, `gh pr create`, and say when it's ready for D to review.
+Never merge it yourself.

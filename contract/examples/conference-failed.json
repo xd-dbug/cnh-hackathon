@@ -1,0 +1,9 @@
+{
+  "id": "h6tn2c0vby",
+  "sourceUrl": "https://example.com/our-event/agenda",
+  "status": "failed",
+  "error": "Unsupported site: no schedule found. Supported: Sessionize, Pretalx, frab/Pentabarf XML, Sched, iCal (.ics), schema.org JSON-LD events.",
+  "days": [],
+  "levels": [],
+  "createdAt": "2026-11-14T18:12:44.630Z"
+}
