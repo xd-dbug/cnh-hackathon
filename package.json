@@ -2,13 +2,15 @@
   "name": "cnh-hackathon",
   "private": true,
   "type": "module",
-  "workspaces": ["ingest", "api", "web"],
+  "workspaces": ["worker", "api", "web"],
   "scripts": {
-    "ingest": "npm run ingest --workspace=ingest",
+    "scrape": "npm run scrape --workspace=worker --",
+    "dev:worker": "npm run dev:worker --workspace=worker",
     "dev:api": "npm run dev:api --workspace=api",
-    "dev:web": "npm run dev:web --workspace=web"
+    "dev:web": "npm run dev:web --workspace=web",
+    "test": "npm test --workspaces --if-present"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.9"
   }
 }

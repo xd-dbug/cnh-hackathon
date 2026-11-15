@@ -152,7 +152,7 @@ API + Worker ──OTLP──> OTel Collector (ns `otel`) ──> otel-lgtm: Tem
 
 ## Verification
 - **Unit tests:** `npm test` passes the adapter fixtures and the clash/ordering rules. The KubeCon
-  fixture with the old allowlist and 90-minute filter still gives **328 talks (51/100/101/76)**.
+  fixture with the old allowlist and 90-minute filter gives **326 talks (49/100/101/76)**; 328 at the hackathon included two mis-tracked coffee breaks.
 - **End to end:** `infra/up.sh`, then `npm run dev:api` and `dev:worker`. Then:
   - `curl -XPOST :3001/conferences -d '{"url":"<pretalx event>"}'` and poll until `ready`.
   - `curl` every route and check that the shapes match `contract/examples/`.
