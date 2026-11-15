@@ -4,9 +4,10 @@ import { formatInTz, isValidTimezone, parseTime } from './tz.js';
 export const MAX_DURATION_MS = 4 * 3600 * 1000;
 const ID = /^[A-Za-z0-9_-]{1,64}$/;
 // Breaks, meals and registration, whatever the source. Leading emoji and punctuation are ignored
-// ("☕ Coffee Break", "🍲 Lunch"); the whole title must be the service name, so "Breaking Changes
-// in Kubernetes" or "Lunch & Learn: eBPF" are kept.
-const SERVICE_TITLE = /^(?:(?:morning|afternoon|coffee|tea|snack)\s+)?(?:break|lunch|breakfast|registration|badge pick-?up)(?:\s*(?:break|&\s*networking))?$/i;
+// ("☕ Coffee Break", "🍲 Lunch"), and so is a qualifier after "|" or "(" ("Lunch | On Own",
+// "Lunch (provided)"). Otherwise the whole title must be the service name, so "Breaking Changes in
+// Kubernetes", "Lunch & Learn: eBPF" or "Registration: OIDC Flows" are kept.
+const SERVICE_TITLE = /^(?:(?:morning|afternoon|coffee|tea|snack)\s+)?(?:break|lunch|breakfast|registration|badge pick-?up)(?:\s*(?:break|&\s*networking))?(?:\s*[|(].*)?$/i;
 
 /**
  * @param {string} title
