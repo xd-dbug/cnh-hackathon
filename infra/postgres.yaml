@@ -1,0 +1,40 @@
+# Postgres 18 + pgvector for the Clash Resolver, run by CloudNativePG in namespace `data`.
+# The stock CNPG `standard` image ships pgvector, so no custom image is needed.
+# up.sh installs the operator, applies this file, then loads contract/schema.sql as the app user.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: data
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: clash-db
+  namespace: data
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18.6-standard-trixie
+  storage:
+    size: 2Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 1Gi }
+  bootstrap:
+    initdb:
+      database: clash
+      owner: clash   # CNPG generates the password into the clash-db-app Secret
+      # pgvector isn't a trusted extension, so the superuser creates it once here.
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector
+  managed:
+    services:
+      additional:
+        # The primary on localhost:5433 via the kind port mapping (5432 is often a host Postgres).
+        - selectorType: rw
+          serviceTemplate:
+            metadata:
+              name: clash-db-nodeport
+            spec:
+              type: NodePort
+              ports:
+                - { name: postgres, port: 5432, targetPort: 5432, nodePort: 30432, protocol: TCP }
