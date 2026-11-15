@@ -14,7 +14,8 @@
         ],
         "track": "AI Inference + Agentic",
         "level": "Advanced",
-        "tags": []
+        "tags": [],
+        "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1233585"
       },
       "b": {
         "id": "1246200",
@@ -30,7 +31,8 @@
         ],
         "track": "AI Inference + Agentic",
         "level": "Any Level",
-        "tags": []
+        "tags": [],
+        "url": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/?id=1246200"
       }
     }
   ]

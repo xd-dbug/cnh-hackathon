@@ -1,57 +1,73 @@
 # CLAUDE.md
 
 ## Project
-Conference Clash Resolver, built at the WeMakeDevs Cloud Native Hackathon (Nov 9, 2026).
-Users star KubeCon NA 2026 talks. The app finds talks whose times overlap and suggests
-similar talks at times that don't clash with the rest of their picks.
+Conference Clash Resolver. Started at the WeMakeDevs Cloud Native Hackathon (Nov 9, 2026) for
+KubeCon NA 2026 only; now being rebuilt for any conference. A user submits a conference schedule URL,
+a background job scrapes it, and the user then stars talks, sees which overlap, and gets similar
+talks at times that don't clash with the rest of their picks.
+
+**Status:** mid-migration. The plan and PR order are in `.claude/plans/multi-conference-pivot.md`.
+Until those PRs land, `ingest/` and the Elasticsearch code in `api/` are the old build; don't extend them.
 
 ## Stack
-- Elasticsearch on Elastic Cloud Serverless (9.x), reached at `ES_URL` over HTTPS with an API key.
-  The only datastore. Abstracts are in a `semantic_text` field on the `.elser-2-elastic` inference
-  endpoint (Elastic Inference Service, so there's no model to download). Serverless rejects index
-  settings such as `number_of_shards`.
-- All agents share the one Cloud project. Only ingest writes the `talks` index; anything else
-  uses its own scratch index (see the api agent).
-- Node + Express API, JavaScript (ES modules).
+- Postgres 18 + pgvector, run by CloudNativePG in kind. The only datastore: conferences, talks,
+  embeddings and the job queue. Schema: `contract/schema.sql`.
+- Job queue: pg-boss (on the same Postgres, so no Redis).
+- Embeddings: `@huggingface/transformers` with `Xenova/bge-small-en-v1.5` (384 dimensions, CPU,
+  no API key). The worker embeds title + abstract; the API embeds only search queries.
+- Node + Express API, Node worker, JavaScript (ES modules).
 - React (Vite) frontend, JavaScript.
-- No Postgres, no auth. Starred talks live in the browser's localStorage.
-- OpenTelemetry: the API sends OTLP to the Collector running in kind (`http://localhost:4318`),
-  and the Collector forwards to Dash0. The API never holds the Dash0 token.
-- The local stack (kind and the Collector) is rebuilt by `infra/up.sh`. Elasticsearch is not part of it.
+- No auth. Starred talks live in the browser's localStorage, keyed per conference.
+- OpenTelemetry: the API and the worker send OTLP to the Collector in kind (`http://localhost:4318`),
+  which forwards to Grafana LGTM (Tempo, Loki, Prometheus) in the cluster. Grafana is on `localhost:3000`.
+- Everything is self-hosted and free. No paid or trial services.
+- The local stack (kind, Postgres, the Collector, LGTM) is rebuilt by `infra/up.sh`.
 
 ## Layout and ownership
 | Folder | Owner | Notes |
 |---|---|---|
-| `contract/` | D (human) | `mapping.json`, `examples/*.json`. Read-only for agents. |
-| `schedule.html` | D (human) | Saved page snapshot at the repo root. Read-only for everyone. |
-| `infra/` | D (human) | kind config, Collector values, `up.sh`. Read-only for agents. |
-| `ingest/` | Agent A | Extractor and loader. Reads `../schedule.html`. |
+| `contract/` | D (human) | `schema.sql`, `examples/*.json`, `README.md`. Read-only for agents. |
+| `schedule.html` | D (human) | Saved KubeCon page. The Sessionize test fixture. Read-only for everyone. |
+| `infra/` | D (human) | kind config, Postgres, Collector, LGTM, `up.sh`. Read-only for agents. |
+| `worker/` | Agent S (scraper) | Safe fetch, platform adapters, embeddings, queue consumer, `npm run scrape`. Replaces `ingest/`. |
 | `api/` | Agent B | Express server. |
 | `web/` | Agent C | React app. |
-| `api/instrumentation.js` | Agent T | The only file in `api/` that the telemetry agent may create or edit, plus the start script line that loads it and OpenTelemetry dependencies in `api/package.json`. |
+| `api/instrumentation.js`, `worker/instrumentation.js` | Agent T | Plus the start-script line that loads each, and the OpenTelemetry dependencies in each `package.json`. |
 
 ## Rules
 1. `contract/` is the source of truth. Do not edit it. If it looks wrong, stop and say so.
-2. Only edit files in the folder you own. Exception: any agent may change the root `package-lock.json` when it adds a dependency (npm workspaces keep one lockfile at the root).
-3. One feature = one branch = one PR. Branches: `agent-a/…`, `agent-b/…`, `agent-c/…`, `agent-t/…`. Never push to `main`. Keep PRs small.
-4. Address Gitar's review comments before asking for a merge.
-5. JavaScript, not TypeScript. Add JSDoc to any function that sends or receives contract data.
-6. No new dependency without a one-line reason in the PR description.
-7. No secrets in code. Each checkout has a `.env` that is a symlink to D's env file outside the repo.
+2. Only edit files in the folder you own. Exception: any agent may change the root `package-lock.json`
+   when it adds a dependency (npm workspaces keep one lockfile at the root).
+3. One feature = one branch = one PR. Branches: `agent-s/…`, `agent-b/…`, `agent-c/…`, `agent-t/…`.
+   Never push to `main`. Keep PRs small. `npm test` must pass before you ask for review.
+4. JavaScript, not TypeScript. Add JSDoc to any function that sends or receives contract data.
+5. No new dependency without a one-line reason in the PR description.
+6. No secrets in code. Each checkout has a `.env` that is a symlink to D's env file outside the repo.
    Never create, edit or commit `.env`. If it's missing, stop and ask D. Variables:
-   `ES_URL`, `ES_API_KEY`, `OTEL_EXPORTER_OTLP_ENDPOINT`.
-   Connect with `new Client({ node: ES_URL, auth: { apiKey: ES_API_KEY } })`.
+   `DATABASE_URL`, `OTEL_EXPORTER_OTLP_ENDPOINT`.
+7. Tests use `node:test` (built in). Adapters are tested against saved fixtures in
+   `worker/test/fixtures/`, never live sites.
 
 ## Data facts
-Source: https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/
+The contract (`contract/README.md`) defines the Talk and Conference shapes and every API rule.
+These are the facts it doesn't cover.
 
-Snapshot: `schedule.html` at the repo root (saved with the browser's "Save page as").
+**Times:** stored as `timestamptz`, with an IANA `timezone` per conference. Take the timezone from
+the source data when it has one, else the `timezone` the user gave, else fail the job with a message
+asking for one. Never hard-code an offset.
 
-**Do not parse the session HTML.** The page embeds the full dataset as JSON (Sessionize format):
+Two talks clash when `a.start < b.end && b.start < a.end`.
+
+**Normalising any source:** skip service sessions (breaks, lunch, registration, "TBA") and anything
+over 4 hours. Strip HTML from abstracts, decode entities, keep paragraph breaks as `\n\n`. Any field
+can be missing: skip it, don't crash.
+
+**Sessionize (and the KubeCon fixture).** Do not parse the session HTML. The page embeds the full
+dataset as JSON:
 ```
 <script type="application/json" class="sched-data"> … </script>
 ```
-Extract that script's text, `JSON.parse` it, and use `data.all`:
+`JSON.parse` that script's text and use `data.all`:
 ```
 data.all.sessions[]    id, title, description (HTML), startsAt, endsAt,
                        speakers (speaker ids), categoryItems (category item ids), roomId
@@ -59,46 +75,36 @@ data.all.speakers[]    id, firstName, lastName, …
 data.all.rooms[]       id, name                     e.g. "Salt Palace | Level 1 | Hall DE"
 data.all.categories[]  title, items[] { id, name }
 ```
-Map each session to a Talk:
-```
-id        = session.id                         (string; official page is ?id=<id>)
-title     = session.title
-abstract  = session.description → strip HTML, decode entities (&#039; etc.)
-start/end = startsAt / endsAt + "-07:00"
-room      = rooms[roomId].name
-venue     = room name before the first " | "  ("Salt Palace" / "Hyatt Regency")
-speakers  = speakers[] ids → "firstName lastName"
-track     = categoryItems in category "All Sessions"   (exactly one value for every kept session)
-level     = categoryItems in category "Audience Level"   (Beginner | Any Level | Advanced)
-tags      = names from "SubTopic" and "CNCF Projects"
-```
-Any lookup can come back empty. Skip that field, don't crash.
+Sessionize times have no offset: they are local to the event. Map `room` from `rooms[roomId].name`,
+`venue` as the room name before the first `" | "`, `speakers` as `"firstName lastName"`. `track`,
+`level` and `tags` come from categories, whose titles vary by event; for KubeCon they are
+"All Sessions", "Audience Level", and "SubTopic" + "CNCF Projects".
 
-Times: the source has no timezone. All times are Mountain Time, so append `-07:00` on load
-and keep it in every query.
-
-Two talks clash when `a.start < b.end && b.start < a.end`.
-
-Keep only sessions whose track is in this allowlist, and that run 90 minutes or less:
+**KubeCon fixture test:** `schedule.html` is KubeCon NA 2026 in Salt Lake City (`America/Denver`).
+With this track allowlist and a 90-minute limit it must give **328 talks** (Mon 51, Tue 100,
+Wed 101, Thu 76). The allowlist belongs to the test, not the app:
 AI Inference + Agentic, Application Development + Delivery, Cloud Native Experience,
 Cloud Native Novice, Connectivity, Data Processing + Storage, Emerging + Advanced,
 Observability, Operations + Performance, Platform Engineering, Security, Maintainer Track,
 ⚡ Lightning Talks, 📚 Tutorials, Inclusion + Accessibility, Project Lightning Talks.
 
-Expected result: **328 talks** (Mon 51, Tue 100, Wed 101, Thu 76). If the count is far off, the
-extraction is wrong.
+**Other platforms** (Pretalx, frab/Pentabarf XML, Sched, iCal, JSON-LD): see the worker section of
+the plan. Each adapter gets its own notes here as it lands.
 
 ## Commands
-- `infra/up.sh`: rebuild the local stack, kind and the Collector (D runs this, not agents)
-- `npm run ingest`: extract talks from `schedule.html` and load them into Elasticsearch
-- `npm run dev:api`: API on port 3001
-- `npm run dev:web`: web app on port 5173
+- `infra/up.sh`: rebuild the local stack (D runs this, not agents). Prints `DATABASE_URL`.
+- `npm test`: unit tests in every workspace.
+- `npm run scrape -- <url|file>`: run the scrape pipeline once, without the queue.
+- `npm run dev:worker`: the queue worker.
+- `npm run dev:api`: API on port 3001.
+- `npm run dev:web`: web app on port 5173.
 
 ## Done means
-- **A (ingest):** prints the talk count (expect 328) and one sample document from the index.
-- **B (api):** a curl of each endpoint returns the same shape as `contract/examples/`.
+- **S (scraper):** the adapter's fixture test passes; `npm run scrape` on the fixture loads the
+  talks and prints the count and one sample row.
+- **B (api):** a curl of each route returns the same shape as `contract/examples/`.
 - **C (web):** renders from `contract/examples/`, then from the live API.
-- **T (telemetry):** an API request shows up as a trace in Dash0.
+- **T (telemetry):** an API request and a scrape job each show up as one trace in Grafana.
 
 ## AI use
 Code is written by Claude Code subagents, directed and reviewed by D. The README discloses this.

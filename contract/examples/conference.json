@@ -1,0 +1,13 @@
+{
+  "id": "7fk2m9qx4a",
+  "sourceUrl": "https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/schedule/",
+  "platform": "sessionize",
+  "name": "KubeCon + CloudNativeCon North America 2026",
+  "timezone": "America/Denver",
+  "status": "ready",
+  "talkCount": 328,
+  "days": ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12"],
+  "levels": ["Advanced", "Any Level", "Beginner"],
+  "createdAt": "2026-11-14T18:02:11.482Z",
+  "scrapedAt": "2026-11-14T18:03:40.915Z"
+}
