@@ -10,7 +10,7 @@ talks at times that don't clash with the rest of their picks.
 Until those PRs land, `ingest/` and the Elasticsearch code in `api/` are the old build; don't extend them.
 
 ## Stack
-- Postgres 17 + pgvector, run by CloudNativePG in kind. The only datastore: conferences, talks,
+- Postgres 18 + pgvector, run by CloudNativePG in kind. The only datastore: conferences, talks,
   embeddings and the job queue. Schema: `contract/schema.sql`.
 - Job queue: pg-boss (on the same Postgres, so no Redis).
 - Embeddings: `@huggingface/transformers` with `Xenova/bge-small-en-v1.5` (384 dimensions, CPU,

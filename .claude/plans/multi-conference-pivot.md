@@ -101,12 +101,12 @@ API + Worker ──OTLP──> OTel Collector (ns `otel`) ──> otel-lgtm: Tem
 ## Infra (`infra/`, D's folder; changes drafted for D's review)
 - **Postgres:** install the CloudNativePG operator and add a `Cluster` with pgvector (`CREATE EXTENSION
   vector` at bootstrap; verify that the CNPG image ships pgvector, otherwise use a pgvector-enabled
-  image). NodePort → `localhost:5432`. `up.sh` prints `DATABASE_URL`, built from the generated
+  image). NodePort → `localhost:5433` (5432 is often a host Postgres). `up.sh` prints `DATABASE_URL`, built from the generated
   `<cluster>-app` Secret, for D to put in the env file.
 - **Observability:** run `grafana/otel-lgtm` as a Deployment in `observability`, with Grafana NodePort
   → `localhost:3000`. The Collector values swap the `otlp_grpc/dash0` exporter for the LGTM service,
   and the Dash0 Secret logic in `up.sh` is deleted.
-- **`kind.yaml`:** drop the 9200 mapping, add 5432 and 3000.
+- **`kind.yaml`:** drop the 9200 mapping, add 5433 and 3000.
 - **Delete:** `infra/elasticsearch.yaml` and `infra/dash0/`.
 - **`infra/k8s/`:** add a worker Deployment. The API and worker get `DATABASE_URL` from the CNPG
   Secret instead of `clash-es`. Bake the embedding model into the worker and api images at build time.
