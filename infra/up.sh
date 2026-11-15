@@ -1,38 +1,42 @@
 #!/usr/bin/env bash
-# Rebuilds the local hackathon stack from nothing. Safe to re-run.
+# Rebuilds the local stack from nothing: kind, Postgres (CloudNativePG + pgvector), Grafana LGTM and
+# the OTel Collector. Safe to re-run. Everything is self-hosted; no credentials leave the machine.
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")"
-
-# Secrets live outside the repo: dash0.env is read from here. The app's .env also lives here and is
-# maintained by hand (Elasticsearch runs on Elastic Cloud, so this script never writes it).
-env_dir="${CNH_ENV_DIR:-/home/xd/hackathon-env}"
+repo="$(cd .. && pwd)"
 
 kind get clusters | grep -qx hackathon || kind create cluster --config kind.yaml --wait 180s
 kubectl config use-context kind-hackathon
 
+helm repo add cnpg https://cloudnative-pg.github.io/charts >/dev/null
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts >/dev/null
-helm repo update open-telemetry >/dev/null
+helm repo update cnpg open-telemetry >/dev/null
 
-# Load Dash0 settings from dash0.env when they aren't already in the environment.
-if [[ -z "${DASH0_ENDPOINT:-}" || -z "${DASH0_AUTH_TOKEN:-}" ]] && [[ -f "$env_dir/dash0.env" ]]; then
-  set -a; source "$env_dir/dash0.env"; set +a
-fi
-if [[ -n "${DASH0_ENDPOINT:-}" && -n "${DASH0_AUTH_TOKEN:-}" ]]; then
-  kubectl create namespace otel --dry-run=client -o yaml | kubectl apply -f -
-  kubectl -n otel create secret generic dash0-credentials \
-    --from-literal=endpoint="$DASH0_ENDPOINT" --from-literal=token="$DASH0_AUTH_TOKEN" \
-    --dry-run=client -o yaml | kubectl apply -f -
-  helm upgrade --install otel open-telemetry/opentelemetry-collector --version 0.178.2 \
-    -n otel -f otel-collector-values.yaml --wait --timeout 5m
-  otel_status="deployed (OTLP localhost:4317 gRPC, localhost:4318 HTTP)"
-else
-  otel_status="SKIPPED: set DASH0_ENDPOINT and DASH0_AUTH_TOKEN or create $env_dir/dash0.env, then re-run"
-fi
+# Postgres: the operator, then the cluster, then the schema (contract/schema.sql is idempotent).
+helm upgrade --install cnpg cnpg/cloudnative-pg --version 0.29.1 \
+  -n cnpg-system --create-namespace --wait --timeout 5m
+kubectl apply -f postgres.yaml
+# The first run pulls a large Postgres image inside kind, hence the long wait.
+until kubectl -n data get cluster clash-db >/dev/null 2>&1; do sleep 2; done
+kubectl -n data wait cluster/clash-db --for=condition=Ready --timeout=10m
+app_uri="$(kubectl -n data get secret clash-db-app -o jsonpath='{.data.uri}' | base64 -d)"
+primary="$(kubectl -n data get cluster clash-db -o jsonpath='{.status.currentPrimary}')"
+# Connect over the pod's loopback as the app user, so the schema is owned by `clash`, not postgres.
+pod_uri="$(sed -E 's#@[^/]+/#@localhost:5432/#' <<<"$app_uri")"
+kubectl -n data exec -i "$primary" -c postgres -- \
+  psql "$pod_uri" -v ON_ERROR_STOP=1 -q -c 'SET client_min_messages = warning' -f - <"$repo/contract/schema.sql"
+
+# Observability: LGTM first, so the Collector's exporter has somewhere to send.
+kubectl apply -f lgtm.yaml
+kubectl -n observability rollout status deployment/lgtm --timeout=5m
+helm upgrade --install otel open-telemetry/opentelemetry-collector --version 0.178.2 \
+  -n otel --create-namespace -f otel-collector-values.yaml --wait --timeout 5m
 
 echo
 kubectl get nodes
 echo
-echo "Elasticsearch: Elastic Cloud (connection settings in $env_dir/.env)"
-echo "OTel Collector: $otel_status"
-echo "Radar:         run 'kubectl radar', then open http://localhost:9280"
-
+echo "Postgres:       localhost:5433, database clash. Put this in your env file:"
+echo "                DATABASE_URL=$(sed -E 's#@[^/]+/#@localhost:5433/#' <<<"$app_uri")"
+echo "OTel Collector: localhost:4317 (gRPC), localhost:4318 (HTTP)"
+echo "Grafana:        http://localhost:3000 (admin / admin)"
+echo "Radar:          run 'kubectl radar', then open http://localhost:9280"

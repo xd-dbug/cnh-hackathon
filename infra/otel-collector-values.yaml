@@ -1,5 +1,5 @@
-# Endpoint and token come from the dash0-credentials Secret, which up.sh builds from
-# DASH0_ENDPOINT and DASH0_AUTH_TOKEN. Nothing sensitive lives in this file.
+# Receives OTLP from the API and worker and forwards it to Grafana LGTM in `observability`.
+# No credentials: everything stays inside the cluster.
 mode: deployment
 replicaCount: 1
 resources:
@@ -10,13 +10,6 @@ image:
 presets:
   kubernetesAttributes:
     enabled: false
-extraEnvs:
-  - name: DASH0_ENDPOINT
-    valueFrom:
-      secretKeyRef: { name: dash0-credentials, key: endpoint }
-  - name: DASH0_AUTH_TOKEN
-    valueFrom:
-      secretKeyRef: { name: dash0-credentials, key: token }
 service:
   type: NodePort
 ports:
@@ -37,21 +30,21 @@ config:
     prometheus: null
   exporters:
     debug: {}
-    otlp_grpc/dash0:
-      endpoint: ${env:DASH0_ENDPOINT}
-      headers:
-        Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+    otlp_grpc/lgtm:
+      endpoint: lgtm.observability.svc.cluster.local:4317
+      tls:
+        insecure: true
   service:
     pipelines:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlp_grpc/dash0, debug]
+        exporters: [otlp_grpc/lgtm, debug]
       metrics:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlp_grpc/dash0, debug]
+        exporters: [otlp_grpc/lgtm, debug]
       logs:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [otlp_grpc/dash0, debug]
+        exporters: [otlp_grpc/lgtm, debug]
