@@ -1,0 +1,17 @@
+{
+  "name": "worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:worker": "node --env-file-if-exists=../.env index.js",
+    "scrape": "node --env-file-if-exists=../.env scrape.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
+    "he": "^2.0.0",
+    "ipaddr.js": "^2.5.0",
+    "pg": "^8.23.1",
+    "pg-boss": "^12.38.2"
+  }
+}
