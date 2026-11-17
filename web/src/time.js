@@ -1,25 +1,29 @@
-const TZ = 'America/Denver';
 
-const timeFmt = new Intl.DateTimeFormat('en-US', {
-  timeZone: TZ,
-  hour: 'numeric',
-  minute: '2-digit',
-});
-const dayFmt = new Intl.DateTimeFormat('en-US', {
-  timeZone: TZ,
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-});
-
+const cache = new Map();
+function formatters(timeZone) {
+  let f = cache.get(timeZone);
+  if (!f) {
+    f = {
+      time: new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' }),
+      day: new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric', }),
+      zone: new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short', })
+    };
+    cache.set(timeZone, f);
+  }
+  return f;
+}
 /**
- * Format a talk's start/end as Mountain Time, whatever the viewer's timezone.
+ * Format a talk's start and end in the conference's timezone, whatever the viewer's timezone.
  * @param {string} start ISO timestamp with offset
  * @param {string} end ISO timestamp with offset
- * @returns {string} e.g. "Tue, Nov 10, 11:30 AM - 12:00 PM MT"
+ * @param {string} timeZone IANA name of the conference, e.g. "America/Denver"
+ * 
+ * @returns {string} e.g. "Tue, Nov 10, 11:30 AM - 12:00 PM MST"
  */
-export function formatRange(start, end) {
+export function formatRange(start, end, timeZone) {
+  const f = formatters(timeZone)
   const s = new Date(start);
   const e = new Date(end);
-  return `${dayFmt.format(s)}, ${timeFmt.format(s)} - ${timeFmt.format(e)} MT`;
+  const zone = f.zone.formatToParts(e).find((p) => p.type === 'timeZoneName').value;
+  return `${f.day.format(s)}, ${f.time.format(s)} - ${f.time.format(e)} ${zone}`;
 }
