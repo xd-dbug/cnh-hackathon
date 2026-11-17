@@ -31,14 +31,14 @@ describe('KubeCon fixture (Sessionize embedded data)', () => {
     assert.equal(parsed.timezone, 'America/Denver');
   });
 
-  it('gives 326 talks after the allowlist and 90-minute limit', () => {
-    assert.equal(kept.length, 326);
+  it('gives 325 talks after the allowlist and 90-minute limit', () => {
+    assert.equal(kept.length, 325);
   });
 
-  it('gives Mon 49, Tue 100, Wed 101, Thu 76', () => {
+  it('gives Mon 48, Tue 100, Wed 101, Thu 76', () => {
     const perDay = {};
     for (const t of kept) perDay[t.start.slice(0, 10)] = (perDay[t.start.slice(0, 10)] ?? 0) + 1;
-    assert.deepEqual(perDay, { '2026-11-09': 49, '2026-11-10': 100, '2026-11-11': 101, '2026-11-12': 76 });
+    assert.deepEqual(perDay, { '2026-11-09': 48, '2026-11-10': 100, '2026-11-11': 101, '2026-11-12': 76 });
   });
 
   it('writes -07:00 on every time', () => {
@@ -139,11 +139,11 @@ describe('registry and normalise', () => {
 
 describe('isServiceTitle', () => {
   it('skips breaks and meals, with or without emoji', () => {
-    for (const t of ['☕ Coffee Break', '🍲 Lunch', 'Lunch Break', 'Morning Break', 'Registration', 'Badge Pick-up', 'Breakfast'])
+    for (const t of ['☕ Coffee Break', '🍲 Lunch', 'Lunch Break', 'Morning Break', 'Registration', 'Badge Pick-up', 'Breakfast', '🍲 Lunch | On Own', 'Lunch (provided)'])
       assert.equal(isServiceTitle(t), true, t);
   });
   it('keeps talks that merely mention them', () => {
-    for (const t of ['Breaking Changes in Kubernetes', 'Lunch & Learn: eBPF', 'Registration Flows with OIDC', 'Take a Break from YAML'])
+    for (const t of ['Breaking Changes in Kubernetes', 'Lunch & Learn: eBPF', 'Registration Flows with OIDC', 'Take a Break from YAML', 'Registration: OIDC Flows', 'Lunch & Learn | eBPF'])
       assert.equal(isServiceTitle(t), false, t);
   });
 });
