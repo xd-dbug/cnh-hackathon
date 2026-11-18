@@ -7,14 +7,15 @@ const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
  * @property {string} id
  * @property {string} title
  * @property {string} [abstract]
- * @property {string} start ISO with -07:00
- * @property {string} end ISO with -07:00
+ * @property {string} start ISO 8601 with the conference's UTC offset at that instant
+ * @property {string} end ISO 8601 with the conference's UTC offset at that instant
  * @property {string} [room]
  * @property {string} [venue]
  * @property {string[]} speakers
  * @property {string} [track]
  * @property {string} [level] may be absent
  * @property {string[]} tags
+ * @property {string} [url] official talk page, when the source has one
  * @property {number} [score] ranking only, not for display
  */
 
@@ -38,11 +39,12 @@ async function getJSON(url, init) {
 }
 
 /**
- * GET /talks
+ * GET /conferences/:cid/talks
+ * @param {string} cid conference id
  * @param {{day?: string, q?: string}} p day is YYYY-MM-DD; omitted when searching (all days)
  * @returns {Promise<Talk[]>}
  */
-export async function fetchTalks({ day, q }) {
+export async function fetchTalks(cid, { day, q }) {
   if (USE_MOCKS) {
     const needle = (q || '').trim().toLowerCase();
     return (await mockTalks())
@@ -53,7 +55,7 @@ export async function fetchTalks({ day, q }) {
   const params = new URLSearchParams();
   if (q && q.trim()) params.set('q', q.trim());
   else params.set('day', day);
-  return (await getJSON(`${BASE}/talks?${params}`)).talks;
+  return (await getJSON(`${BASE}/conferences/${encodeURIComponent(cid)}/talks?${params}`)).talks;
 }
 
 /** Contract overlap rule. */
@@ -68,11 +70,12 @@ function before(a, b) {
 }
 
 /**
- * POST /clashes
+ * POST /conferences/:cid/clashes
+ * @param {string} cid conference id
  * @param {string[]} starred
  * @returns {Promise<{a: Talk, b: Talk}[]>}
  */
-export async function fetchClashes(starred) {
+export async function fetchClashes(cid, starred) {
   if (!starred.length) return [];
   if (USE_MOCKS) {
     const ids = new Set(starred);
@@ -92,7 +95,7 @@ export async function fetchClashes(starred) {
         x.b.id.localeCompare(y.b.id),
     );
   }
-  const body = await getJSON(`${BASE}/clashes`, {
+  const body = await getJSON(`${BASE}/conferences/${encodeURIComponent(cid)}/clashes`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ starred }),
@@ -101,11 +104,12 @@ export async function fetchClashes(starred) {
 }
 
 /**
- * GET /alternatives
- * @param {{talk: string, starred: string[], level?: string, accessible?: boolean}} p
+ * GET /conferences/:cid/alternatives
+ * @param {string} cid conference id
+ * @param {{talk: string, starred: string[], level?: string}} p
  * @returns {Promise<Talk[]>}
  */
-export async function fetchAlternatives({ talk, starred, level, accessible }) {
+export async function fetchAlternatives(cid, { talk, starred, level }) {
   if (USE_MOCKS) {
     // The example answers one request; narrow it so it stays honest after swaps.
     const all = await mockTalks();
@@ -115,12 +119,10 @@ export async function fetchAlternatives({ talk, starred, level, accessible }) {
       (t) =>
         !starred.includes(t.id) &&
         !others.some((o) => overlaps(o, t)) &&
-        (!level || t.level === level) &&
-        (!accessible || t.track === 'Inclusion + Accessibility'),
+        (!level || t.level === level),
     );
   }
   const params = new URLSearchParams({ talk, starred: starred.join(',') });
   if (level) params.set('level', level);
-  if (accessible) params.set('accessible', 'true');
-  return (await getJSON(`${BASE}/alternatives?${params}`)).alternatives;
+  return (await getJSON(`${BASE}/conferences/${encodeURIComponent(cid)}/alternatives?${params}`)).alternatives;
 }
