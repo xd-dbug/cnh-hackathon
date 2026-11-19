@@ -19,9 +19,48 @@ const BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
  * @property {number} [score] ranking only, not for display
  */
 
+/**
+ * @typedef {Object} Conference
+ * @property {string} id
+ * @property {string} sourceUrl
+ * @property {string} [platform]
+ * @property {string} [name] always present when ready
+ * @property {string} [timezone] IANA name, always present when ready
+ * @property {'queued'|'fetching'|'parsing'|'embedding'|'ready'|'failed'} status
+ * @property {string} [error] a sentence a user can read, only when failed
+ * @property {number} [talkCount] always present when ready
+ * @property {string[]} days YYYY-MM-DD in the conference's timezone; [] until ready
+ * @property {string[]} levels sorted; [] until ready
+ * @property {string} createdAt
+ * @property {string} [scrapedAt]
+ */
+
 /** @returns {Promise<Talk[]>} */
 async function mockTalks() {
   return (await import('../../contract/examples/talks.json')).default.talks;
+}
+
+/** @returns {Promise<Conference[]>} */
+async function mockConferences() {
+  return (await import('../../contract/examples/conferences.json')).default.conferences;
+}
+
+/** @returns {Promise<Conference>} */
+async function mockQueuedConference() {
+  return (await import('../../contract/examples/conference-queued.json')).default;
+}
+
+/** @returns {Promise<Conference>} */
+async function mockFailedConference() {
+  return (await import('../../contract/examples/conference-failed.json')).default;
+}
+
+/** Every example conference: ready, queued and failed. @returns {Promise<Conference[]>} */
+async function allMockConferences() {
+  const ready = await mockConferences();
+  const queued = await mockQueuedConference();
+  const failed = await mockFailedConference();
+  return [...ready, queued, failed];
 }
 
 async function getJSON(url, init) {
@@ -67,6 +106,51 @@ function overlaps(a, b) {
 function before(a, b) {
   const d = new Date(a.start) - new Date(b.start);
   return d !== 0 ? d < 0 : a.id < b.id;
+}
+
+/**
+ * GET /conferences (ready conferences only)
+ * @returns {Promise<Conference[]>}
+ */
+export async function fetchConferences() {
+  if (USE_MOCKS) return mockConferences();
+  return (await getJSON(`${BASE}/conferences`)).conferences;
+}
+
+/**
+ * GET /conferences/:cid (any status; the status view polls this)
+ * @param {string} cid conference id
+ * @returns {Promise<Conference>}
+ */
+export async function fetchConference(cid) {
+  if (USE_MOCKS) {
+    const f = (await allMockConferences()).find((c) => c.id === cid);
+    if (!f) throw new Error('Conference not found');
+    return f;
+  }
+  return getJSON(`${BASE}/conferences/${encodeURIComponent(cid)}`);
+}
+
+/**
+ * POST /conferences (202 when queued, 200 when the URL is already known; both return a Conference)
+ * @param {{url: string, timezone?: string}} p timezone is an IANA name, used only when the source has none
+ * @returns {Promise<Conference>}
+ */
+export async function submitConference({ url, timezone }) {
+  const payload = { url: url.trim() };
+  if (timezone && timezone.trim()) payload.timezone = timezone.trim();
+
+  if (USE_MOCKS) {
+    const f = (await allMockConferences()).find(c => c.sourceUrl === url.trim());
+    if (!f) return mockQueuedConference();
+    return f;
+  }
+
+  return getJSON(`${BASE}/conferences`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 /**
